@@ -13,70 +13,6 @@
 
   const PIECE_VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
 
-  // Piece-square tables (from white's perspective; flip for black)
-  const PST = {
-    p: [
-       0,  0,  0,  0,  0,  0,  0,  0,
-      50, 50, 50, 50, 50, 50, 50, 50,
-      10, 10, 20, 30, 30, 20, 10, 10,
-       5,  5, 10, 25, 25, 10,  5,  5,
-       0,  0,  0, 20, 20,  0,  0,  0,
-       5, -5,-10,  0,  0,-10, -5,  5,
-       5, 10, 10,-20,-20, 10, 10,  5,
-       0,  0,  0,  0,  0,  0,  0,  0
-    ],
-    n: [
-      -50,-40,-30,-30,-30,-30,-40,-50,
-      -40,-20,  0,  0,  0,  0,-20,-40,
-      -30,  0, 10, 15, 15, 10,  0,-30,
-      -30,  5, 15, 20, 20, 15,  5,-30,
-      -30,  0, 15, 20, 20, 15,  0,-30,
-      -30,  5, 10, 15, 15, 10,  5,-30,
-      -40,-20,  0,  5,  5,  0,-20,-40,
-      -50,-40,-30,-30,-30,-30,-40,-50
-    ],
-    b: [
-      -20,-10,-10,-10,-10,-10,-10,-20,
-      -10,  0,  0,  0,  0,  0,  0,-10,
-      -10,  0, 10, 10, 10, 10,  0,-10,
-      -10,  5,  5, 10, 10,  5,  5,-10,
-      -10,  0, 10, 10, 10, 10,  0,-10,
-      -10, 10, 10, 10, 10, 10, 10,-10,
-      -10,  5,  0,  0,  0,  0,  5,-10,
-      -20,-10,-10,-10,-10,-10,-10,-20
-    ],
-    r: [
-       0,  0,  0,  0,  0,  0,  0,  0,
-       5, 10, 10, 10, 10, 10, 10,  5,
-      -5,  0,  0,  0,  0,  0,  0, -5,
-      -5,  0,  0,  0,  0,  0,  0, -5,
-      -5,  0,  0,  0,  0,  0,  0, -5,
-      -5,  0,  0,  0,  0,  0,  0, -5,
-      -5,  0,  0,  0,  0,  0,  0, -5,
-       0,  0,  0,  5,  5,  0,  0,  0
-    ],
-    q: [
-      -20,-10,-10, -5, -5,-10,-10,-20,
-      -10,  0,  0,  0,  0,  0,  0,-10,
-      -10,  0,  5,  5,  5,  5,  0,-10,
-       -5,  0,  5,  5,  5,  5,  0, -5,
-        0,  0,  5,  5,  5,  5,  0, -5,
-      -10,  5,  5,  5,  5,  5,  0,-10,
-      -10,  0,  5,  0,  0,  0,  0,-10,
-      -20,-10,-10, -5, -5,-10,-10,-20
-    ],
-    k: [
-      -30,-40,-40,-50,-50,-40,-40,-30,
-      -30,-40,-40,-50,-50,-40,-40,-30,
-      -30,-40,-40,-50,-50,-40,-40,-30,
-      -30,-40,-40,-50,-50,-40,-40,-30,
-      -20,-30,-30,-40,-40,-30,-30,-20,
-      -10,-20,-20,-20,-20,-20,-20,-10,
-       20, 20,  0,  0,  0,  0, 20, 20,
-       20, 30, 10,  0,  0, 10, 30, 20
-    ]
-  };
-
   // ───── Game State ─────
   let game = new Chess();
   let boardFlipped = false;
@@ -598,16 +534,35 @@
     diffBottomEl.textContent = bottomDiff;
   }
 
-  // ───── AI Engine ─────
+  // ───── AI Engine (Backend Worker) ─────
+  // Use the VM backend API when hosted anywhere (including GitHub Pages)
+  const AI_API_URL = (function() {
+    // If running on the VM directly, use relative path
+    if (window.location.port === '8080' || window.location.hostname === '213.35.120.193') {
+      return window.location.origin + window.location.pathname.replace(/\/(?:index\.html)?$/, '') + '/api/ai-move';
+    }
+    // For external hosting (GitHub Pages etc), call VM backend
+    return 'http://213.35.120.193:8080/chess/api/ai-move';
+  })();
+
   function scheduleAI() {
     aiThinking = true;
     thinkingEl.classList.remove('hidden');
-    setTimeout(() => {
-      const bestMove = findBestMove();
-      if (bestMove) {
+
+    const fen = game.fen();
+
+    fetch(AI_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fen: fen, depth: 3 })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (data.move) {
+        var bestMove = data.move;
         animating = true;
-        animateMove(bestMove.from, bestMove.to, () => {
-          const result = game.move(bestMove);
+        animateMove(bestMove.from, bestMove.to, function() {
+          var result = game.move(bestMove);
           lastMove = { from: bestMove.from, to: bestMove.to };
           moveHistory.push(result.san);
           animating = false;
@@ -635,157 +590,26 @@
         aiThinking = false;
         thinkingEl.classList.add('hidden');
       }
-    }, 100); // Small delay so UI updates before AI computes
-  }
-
-  function findBestMove() {
-    const moves = game.moves({ verbose: true });
-    if (moves.length === 0) return null;
-
-    let bestScore = -Infinity;
-    let bestMove = moves[0];
-
-    // Order moves: captures first for better pruning
-    moves.sort((a, b) => moveOrderScore(b) - moveOrderScore(a));
-
-    // AI is black (maximizing black's score).
-    // At the root (black to move), we maximize evaluateAbsolute() (positive = good for black).
-    for (const move of moves) {
-      game.move(move);
-      // After black moves, it's white's turn: white minimizes the score.
-      const score = alphaBeta(2, -Infinity, Infinity, false);
-      game.undo();
-      if (score > bestScore) {
-        bestScore = score;
-        bestMove = move;
+    })
+    .catch(function(err) {
+      console.error('AI worker error:', err);
+      aiThinking = false;
+      thinkingEl.classList.add('hidden');
+      // Fallback: pick a random legal move
+      var moves = game.moves({ verbose: true });
+      if (moves.length > 0) {
+        var fallback = moves[Math.floor(Math.random() * moves.length)];
+        var result = game.move(fallback);
+        lastMove = { from: fallback.from, to: fallback.to };
+        moveHistory.push(result.san);
+        playSound('move');
+        renderBoard();
+        updateStatus();
+        updateMoveHistory();
+        updateCaptured();
+        if (game.game_over()) showGameOver();
       }
-    }
-
-    return bestMove;
-  }
-
-  function moveOrderScore(move) {
-    let score = 0;
-    if (move.captured) {
-      // MVV-LVA: Most Valuable Victim - Least Valuable Attacker
-      score += PIECE_VALUES[move.captured] * 10 - PIECE_VALUES[move.piece];
-    }
-    if (move.promotion) score += PIECE_VALUES[move.promotion];
-    return score;
-  }
-
-  /**
-   * Alpha-beta minimax.
-   * isMaximizing = true means it's black's turn (AI), false means white's turn.
-   * The evaluation function returns a score where positive = good for black.
-   */
-  function alphaBeta(depth, alpha, beta, isMaximizing) {
-    if (depth === 0) {
-      return quiescence(alpha, beta, isMaximizing, 4);
-    }
-
-    const moves = game.moves({ verbose: true });
-
-    if (moves.length === 0) {
-      if (game.in_check()) {
-        // Checkmate: bad for the side to move
-        return isMaximizing ? -99999 - depth : 99999 + depth;
-      }
-      return 0; // Stalemate
-    }
-
-    // Move ordering
-    moves.sort((a, b) => moveOrderScore(b) - moveOrderScore(a));
-
-    if (isMaximizing) {
-      let maxEval = -Infinity;
-      for (const move of moves) {
-        game.move(move);
-        const eval_ = alphaBeta(depth - 1, alpha, beta, false);
-        game.undo();
-        if (eval_ > maxEval) maxEval = eval_;
-        if (eval_ > alpha) alpha = eval_;
-        if (beta <= alpha) break;
-      }
-      return maxEval;
-    } else {
-      let minEval = Infinity;
-      for (const move of moves) {
-        game.move(move);
-        const eval_ = alphaBeta(depth - 1, alpha, beta, true);
-        game.undo();
-        if (eval_ < minEval) minEval = eval_;
-        if (eval_ < beta) beta = eval_;
-        if (beta <= alpha) break;
-      }
-      return minEval;
-    }
-  }
-
-  function quiescence(alpha, beta, isMaximizing, depthLeft) {
-    const standPat = evaluateAbsolute();
-
-    if (depthLeft === 0) return standPat;
-
-    if (isMaximizing) {
-      if (standPat >= beta) return beta;
-      if (standPat > alpha) alpha = standPat;
-
-      const captures = game.moves({ verbose: true }).filter(m => m.captured);
-      captures.sort((a, b) => moveOrderScore(b) - moveOrderScore(a));
-
-      for (const move of captures) {
-        game.move(move);
-        const score = quiescence(alpha, beta, false, depthLeft - 1);
-        game.undo();
-        if (score >= beta) return beta;
-        if (score > alpha) alpha = score;
-      }
-      return alpha;
-    } else {
-      if (standPat <= alpha) return alpha;
-      if (standPat < beta) beta = standPat;
-
-      const captures = game.moves({ verbose: true }).filter(m => m.captured);
-      captures.sort((a, b) => moveOrderScore(b) - moveOrderScore(a));
-
-      for (const move of captures) {
-        game.move(move);
-        const score = quiescence(alpha, beta, true, depthLeft - 1);
-        game.undo();
-        if (score <= alpha) return alpha;
-        if (score < beta) beta = score;
-      }
-      return beta;
-    }
-  }
-
-  /**
-   * Absolute evaluation: positive = good for black (AI), negative = good for white.
-   */
-  function evaluateAbsolute() {
-    const board = game.board();
-    let score = 0;
-
-    for (let r = 0; r < 8; r++) {
-      for (let c = 0; c < 8; c++) {
-        const piece = board[r][c];
-        if (!piece) continue;
-
-        const value = PIECE_VALUES[piece.type];
-        // PST index: for white pieces, use row as-is; for black, mirror vertically
-        const pstIndex = piece.color === 'w' ? r * 8 + c : (7 - r) * 8 + c;
-        const pst = PST[piece.type] ? PST[piece.type][pstIndex] : 0;
-
-        if (piece.color === 'b') {
-          score += value + pst;
-        } else {
-          score -= value + pst;
-        }
-      }
-    }
-
-    return score;
+    });
   }
 
   // ───── Controls ─────
