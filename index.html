@@ -6,10 +6,11 @@
   <meta name="theme-color" content="#0a0a1a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="description" content="Play chess against an AI opponent on your mobile device">
-  <title>Chess</title>
+  <meta name="description" content="3D Chess - Play against AI">
+  <title>3D Chess</title>
   <link rel="stylesheet" href="css/style.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 </head>
 <body>
   <div class="bg-effects">
@@ -17,10 +18,11 @@
     <div class="bg-orb"></div>
     <div class="bg-orb"></div>
   </div>
+
   <div id="app">
-    <header id="header">
+    <header>
       <div class="header-inner">
-        <h1 class="app-title">Chess</h1>
+        <h1 class="app-title">3D Chess</h1>
         <div id="status" class="status-text">White to move</div>
       </div>
     </header>
@@ -30,19 +32,16 @@
       <div class="material-diff" id="diff-top"></div>
     </div>
 
-    <div id="board-container">
-      <div id="rank-labels-left" class="rank-labels"></div>
-      <div id="board" class="board"></div>
-      <div id="rank-labels-right" class="rank-labels"></div>
+    <div id="board-3d-wrapper">
+      <canvas id="chess-canvas"></canvas>
     </div>
-    <div id="file-labels" class="file-labels"></div>
 
     <div id="captured-bottom" class="captured-bar">
       <div class="captured-pieces" id="captured-white"></div>
       <div class="material-diff" id="diff-bottom"></div>
     </div>
 
-    <div id="controls" class="controls">
+    <div class="controls">
       <button id="btn-new" class="ctrl-btn" title="New Game">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         <span>New</span>
@@ -57,7 +56,7 @@
       </button>
     </div>
 
-    <div id="move-history-container" class="move-history-container">
+    <div class="move-history-container">
       <div id="move-history" class="move-history"></div>
     </div>
 

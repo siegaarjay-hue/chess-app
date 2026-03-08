@@ -1,0 +1,25 @@
+{
+  "name": "chess-app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/siegaarjay-hue/chess-app.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/siegaarjay-hue/chess-app/issues"
+  },
+  "homepage": "https://github.com/siegaarjay-hue/chess-app#readme",
+  "dependencies": {
+    "chess.js": "^0.12.1",
+    "cors": "^2.8.6",
+    "express": "^5.2.1"
+  }
+}
