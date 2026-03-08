@@ -997,11 +997,16 @@
   if (typeof THREE === 'undefined') {
     document.getElementById('board-3d-wrapper').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#ff5252;font-size:0.9rem;padding:20px;text-align:center">3D engine failed to load. Please refresh.</div>';
   } else {
-    initThree();
-    updateStatus();
-    updateMoveHistory();
-    updateCaptured();
-    updateHighlights();
+    try {
+      initThree();
+      updateStatus();
+      updateMoveHistory();
+      updateCaptured();
+      updateHighlights();
+    } catch (e) {
+      console.error('Init error:', e);
+      document.getElementById('board-3d-wrapper').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#ff5252;font-size:0.9rem;padding:20px;text-align:center">WebGL not supported. Please use a modern browser.</div>';
+    }
   }
 
   document.addEventListener('touchstart', ensureAudio, { once: true });
