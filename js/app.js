@@ -71,17 +71,21 @@
   var animations = [];
 
   function initThree() {
+    // Ensure wrapper has dimensions
+    var wrapW = wrapper.clientWidth || wrapper.offsetWidth || 360;
+    var wrapH = wrapper.clientHeight || Math.round(wrapW * 0.85) || 306;
+
     scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x0a0a1a, 0.035);
 
     // Camera - looking down at an angle
-    camera = new THREE.PerspectiveCamera(45, wrapper.clientWidth / (wrapper.clientWidth * 0.85), 0.1, 100);
+    camera = new THREE.PerspectiveCamera(45, wrapW / wrapH, 0.1, 100);
     setCameraPosition();
 
     // Renderer
     renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(wrapper.clientWidth, wrapper.clientWidth * 0.85);
+    renderer.setSize(wrapW, wrapH);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -976,8 +980,8 @@
 
   // ─── Resize ───
   function onResize() {
-    var w = wrapper.clientWidth;
-    var h = w * 0.85;
+    var w = wrapper.clientWidth || wrapper.offsetWidth || 360;
+    var h = wrapper.clientHeight || Math.round(w * 0.85) || 306;
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h);
@@ -990,11 +994,15 @@
   }
 
   // ─── Init ───
-  initThree();
-  updateStatus();
-  updateMoveHistory();
-  updateCaptured();
-  updateHighlights();
+  if (typeof THREE === 'undefined') {
+    document.getElementById('board-3d-wrapper').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#ff5252;font-size:0.9rem;padding:20px;text-align:center">3D engine failed to load. Please refresh.</div>';
+  } else {
+    initThree();
+    updateStatus();
+    updateMoveHistory();
+    updateCaptured();
+    updateHighlights();
+  }
 
   document.addEventListener('touchstart', ensureAudio, { once: true });
   document.addEventListener('click', ensureAudio, { once: true });

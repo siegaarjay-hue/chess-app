@@ -83,7 +83,7 @@ header { width: 100%; padding: 8px 0 4px; text-align: center; }
 /* ===== 3D CANVAS WRAPPER ===== */
 #board-3d-wrapper {
   width: var(--board-width);
-  aspect-ratio: 1 / 0.85;
+  height: calc(var(--board-width) * 0.85);
   position: relative;
   border-radius: 14px;
   overflow: hidden;
@@ -94,6 +94,7 @@ header { width: 100%; padding: 8px 0 4px; text-align: center; }
   height: 100% !important;
   display: block;
   border-radius: 14px;
+  touch-action: none;
 }
 
 /* ===== CONTROLS ===== */
@@ -216,7 +217,7 @@ header { width: 100%; padding: 8px 0 4px; text-align: center; }
   .controls { padding: 4px 0; }
   .ctrl-btn { padding: 6px 14px; }
   .move-history-container { max-height: 50px; }
-  #board-3d-wrapper { aspect-ratio: 1 / 0.78; }
+  #board-3d-wrapper { height: calc(var(--board-width) * 0.78); }
 }
 @media (min-width: 541px) { :root { --board-width: min(480px, 85vh - 220px); } }
 @media (max-width: 340px) {
